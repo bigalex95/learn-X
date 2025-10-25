@@ -1,0 +1,14 @@
+# Jupyter Notebook and core dependencies
+notebook>=6.5.0
+jupyter>=1.0.0
+ipykernel>=6.0.0
+
+# Language kernels
+bash_kernel>=0.7.2
+
+# Note: Install with uv for faster installation:
+#   uv pip install -r requirements.txt
+#
+# Note: Rust kernel (evcxr_jupyter) must be installed via cargo
+# Note: C++ kernel (xeus-cling) must be installed via conda
+# See individual language folders for installation scripts
