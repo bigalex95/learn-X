@@ -1,0 +1,107 @@
+name: Sync Feature Branches with Main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch:
+          - feature/learn-cpp-tutorial
+          - feature/learn-go-tutorial
+          - feature/learn-python-tutorial
+          - feature/learn-rust-tutorial
+          - feature/learn-shell-tutorial
+      fail-fast: false # Continue even if one branch fails
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync ${{ matrix.branch }} with main
+        run: |
+          echo "Syncing ${{ matrix.branch }} with main..."
+
+          # Checkout the feature branch
+          git checkout ${{ matrix.branch }}
+
+          # Merge main into the feature branch
+          if git merge origin/main --no-edit -m "chore: sync ${{ matrix.branch }} with main"; then
+            echo "✅ Successfully merged main into ${{ matrix.branch }}"
+            
+            # Push the changes
+            git push origin ${{ matrix.branch }}
+            echo "✅ Successfully pushed ${{ matrix.branch }}"
+          else
+            echo "⚠️ Merge conflict detected in ${{ matrix.branch }}"
+            echo "Please resolve conflicts manually"
+            git merge --abort
+            exit 1
+          fi
+
+      - name: Create issue on conflict
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = '${{ matrix.branch }}';
+            const title = `Merge conflict: ${branch} cannot be auto-synced with main`;
+            const body = `
+            ## ⚠️ Automatic Branch Sync Failed
+
+            The automatic sync of \`${branch}\` with \`main\` failed due to merge conflicts.
+
+            **Action Required:**
+            Please manually resolve the conflicts:
+
+            \`\`\`bash
+            git checkout ${branch}
+            git merge main
+            # Resolve conflicts
+            git commit
+            git push origin ${branch}
+            \`\`\`
+
+            **Triggered by:** ${{ github.sha }}
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            `;
+
+            // Check if issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['auto-sync-conflict']
+            });
+
+            const existingIssue = issues.data.find(issue => issue.title === title);
+
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['auto-sync-conflict', 'merge-conflict']
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `Conflict still exists as of commit ${{ github.sha }}`
+              });
+            }

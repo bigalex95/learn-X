@@ -1,0 +1,137 @@
+name: PR Validation Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for merge conflicts
+        run: |
+          echo "Checking for merge conflicts with main..."
+          git fetch origin main
+
+          if git merge-tree $(git merge-base HEAD origin/main) origin/main HEAD | grep -q "^<<<<<"; then
+            echo "❌ Merge conflicts detected!"
+            echo "Please resolve conflicts before merging."
+            exit 1
+          else
+            echo "✅ No merge conflicts detected"
+          fi
+
+      - name: Validate project structure
+        run: |
+          echo "Validating project structure..."
+
+          # Check required root files
+          required_files=("README.md" "requirements.txt" "setup-venv.sh" "run-jupyter.sh")
+          missing_files=()
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+
+          if [ ${#missing_files[@]} -ne 0 ]; then
+            echo "❌ Missing required files: ${missing_files[*]}"
+            exit 1
+          fi
+
+          echo "✅ All required root files present"
+
+      - name: Check for broken notebooks
+        run: |
+          echo "Checking for notebook structure..."
+
+          # Find all .ipynb files
+          notebooks=$(find . -name "*.ipynb" -not -path "./.venv/*" -not -path "./.git/*")
+
+          if [ -z "$notebooks" ]; then
+            echo "ℹ️ No notebooks found in this PR"
+            exit 0
+          fi
+
+          echo "Found notebooks:"
+          echo "$notebooks"
+
+          # Validate JSON structure
+          invalid_notebooks=()
+          for notebook in $notebooks; do
+            if ! python3 -m json.tool "$notebook" > /dev/null 2>&1; then
+              invalid_notebooks+=("$notebook")
+            fi
+          done
+
+          if [ ${#invalid_notebooks[@]} -ne 0 ]; then
+            echo "❌ Invalid notebook JSON structure in:"
+            printf '%s\n' "${invalid_notebooks[@]}"
+            exit 1
+          fi
+
+          echo "✅ All notebooks have valid JSON structure"
+
+      - name: Check for corresponding markdown files
+        run: |
+          echo "Checking that each notebook has a corresponding markdown file..."
+
+          missing_md=()
+          notebooks=$(find . -name "*.ipynb" -not -path "./.venv/*" -not -path "./.git/*")
+
+          for notebook in $notebooks; do
+            md_file="${notebook%.ipynb}.md"
+            if [ ! -f "$md_file" ]; then
+              missing_md+=("$md_file")
+            fi
+          done
+
+          if [ ${#missing_md[@]} -ne 0 ]; then
+            echo "⚠️ Warning: Missing markdown files for notebooks:"
+            printf '%s\n' "${missing_md[@]}"
+            # This is just a warning, not a failure
+          else
+            echo "✅ All notebooks have corresponding markdown files"
+          fi
+
+      - name: Validate branch naming
+        run: |
+          echo "Validating branch name..."
+          branch_name="${{ github.head_ref }}"
+
+          valid_prefixes=("feature/" "bugfix/" "hotfix/" "docs/")
+          is_valid=false
+
+          for prefix in "${valid_prefixes[@]}"; do
+            if [[ "$branch_name" == "$prefix"* ]]; then
+              is_valid=true
+              break
+            fi
+          done
+
+          if [ "$is_valid" = false ]; then
+            echo "⚠️ Warning: Branch name should start with one of: ${valid_prefixes[*]}"
+            echo "Current branch: $branch_name"
+            # This is just a warning, not a failure
+          else
+            echo "✅ Branch name follows convention"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "================================"
+          echo "PR Validation Complete"
+          echo "================================"
+          echo "PR: ${{ github.event.pull_request.title }}"
+          echo "Branch: ${{ github.head_ref }}"
+          echo "Author: ${{ github.event.pull_request.user.login }}"
+          echo "================================"
