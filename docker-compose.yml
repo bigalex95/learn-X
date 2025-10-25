@@ -1,0 +1,35 @@
+services:
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: learn-x-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      # Mount all tutorial directories
+      - ./learn-python:/home/jovyan/work/learn-python
+      - ./learn-go:/home/jovyan/work/learn-go
+      - ./learn-rust:/home/jovyan/work/learn-rust
+      - ./learn-cpp:/home/jovyan/work/learn-cpp
+      - ./learn-shell:/home/jovyan/work/learn-shell
+      # Mount root files for reference
+      - ./README.md:/home/jovyan/work/README.md:ro
+      - ./LICENSE:/home/jovyan/work/LICENSE:ro
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - GRANT_SUDO=yes
+    user: jovyan
+    working_dir: /home/jovyan/work
+    command: >
+      bash -c "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='' --NotebookApp.password=''"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  jupyter_data:

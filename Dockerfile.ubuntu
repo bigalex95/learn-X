@@ -1,0 +1,124 @@
+# Ubuntu-based Dockerfile for learn-X
+# More control, build everything from scratch
+FROM ubuntu:22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USER=learner
+ENV HOME=/home/${USER}
+
+# Create user
+RUN useradd -m -s /bin/bash -u 1000 ${USER}
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    wget \
+    git \
+    pkg-config \
+    libzmq3-dev \
+    libssl-dev \
+    cmake \
+    python3 \
+    python3-pip \
+    python3-dev \
+    clang \
+    llvm \
+    libclang-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python3 as default python
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# ============================================
+# Python & Jupyter
+# ============================================
+RUN pip3 install --no-cache-dir \
+    jupyter \
+    jupyterlab \
+    ipykernel \
+    numpy \
+    pandas \
+    matplotlib \
+    jupyter-collaboration \
+    jupyterlab-git
+
+# ============================================
+# Go Kernel
+# ============================================
+RUN wget -q https://go.dev/dl/go1.21.5.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz && \
+    rm go1.21.5.linux-amd64.tar.gz
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="${HOME}/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+USER ${USER}
+RUN mkdir -p ${GOPATH} && \
+    go install github.com/gopherdata/gophernotes@latest && \
+    mkdir -p ~/.local/share/jupyter/kernels/gophernotes && \
+    cd ~/.local/share/jupyter/kernels/gophernotes && \
+    wget -q https://raw.githubusercontent.com/gopherdata/gophernotes/master/kernel/kernel.json && \
+    wget -q https://raw.githubusercontent.com/gopherdata/gophernotes/master/kernel/logo-32x32.png && \
+    wget -q https://raw.githubusercontent.com/gopherdata/gophernotes/master/kernel/logo-64x64.png
+
+# ============================================
+# Rust Kernel
+# ============================================
+USER root
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+USER ${USER}
+ENV PATH="${HOME}/.cargo/bin:${PATH}"
+RUN cargo install evcxr_jupyter && \
+    evcxr_jupyter --install
+
+# ============================================
+# Bash Kernel
+# ============================================
+USER root
+RUN pip3 install --no-cache-dir bash_kernel
+
+USER ${USER}
+RUN python3 -m bash_kernel.install
+
+# ============================================
+# C++ Kernel (jupyter-xeus-cling)
+# Note: Building from source is complex, using pre-built alternative
+# ============================================
+USER root
+# Install xeus-cling dependencies
+RUN apt-get update && apt-get install -y \
+    libcxxopts-dev \
+    libnlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# For Ubuntu-based, we'll use cling interpreter directly
+# Download and install pre-built cling
+RUN cd /tmp && \
+    wget -q https://root.cern/download/cling/cling_2020-11-05_ROOT-ubuntu2004.tar.bz2 && \
+    tar -xjf cling_2020-11-05_ROOT-ubuntu2004.tar.bz2 && \
+    mv cling_2020-11-05_ROOT-ubuntu2004 /opt/cling && \
+    rm cling_2020-11-05_ROOT-ubuntu2004.tar.bz2
+
+ENV PATH="/opt/cling/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/cling/lib:${LD_LIBRARY_PATH}"
+
+# Install xeus-cling kernel (simplified version)
+USER ${USER}
+RUN pip3 install --no-cache-dir jupyter-cling-kernel || \
+    echo "Warning: C++ kernel installation may require manual configuration"
+
+# ============================================
+# Setup
+# ============================================
+USER ${USER}
+WORKDIR ${HOME}/work
+
+# Expose Jupyter port
+EXPOSE 8888
+
+# Default command
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=''"]

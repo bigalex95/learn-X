@@ -214,6 +214,57 @@ learn-<language>/
 
 ## 🚀 Getting Started
 
+### Option 1: Docker (Recommended) 🐳
+
+The easiest way to get started is using Docker. All programming languages and Jupyter kernels are pre-configured!
+
+**Prerequisites:**
+
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+**Quick Start:**
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/learn-X.git
+cd learn-X
+
+# Start Jupyter Lab with all kernels
+docker compose up
+
+# Open your browser to http://localhost:8888
+```
+
+**What's Included:**
+
+- 🐍 Python 3 + Jupyter Lab
+- 🐹 Go (gophernotes kernel)
+- 🦀 Rust (evcxr_jupyter kernel)
+- ⚙️ C++ (xeus-cling kernel)
+- 🐚 Bash (bash_kernel)
+- 📦 All tutorial notebooks pre-loaded
+
+**Docker Commands:**
+
+```bash
+# Start in background
+docker compose up -d
+
+# Stop the container
+docker compose down
+
+# Rebuild after changes
+docker compose up --build
+
+# View logs
+docker compose logs -f
+```
+
+### Option 2: Local Installation
+
+If you prefer to install everything locally:
+
 1. Clone this repository:
 
    ```bash
@@ -221,13 +272,35 @@ learn-<language>/
    cd learn-X
    ```
 
-2. Navigate to the tutorial you want to learn:
+2. Set up the environment:
+
+   ```bash
+   # Create Python virtual environment
+   ./setup-venv.sh
+
+   # Install all Jupyter kernels
+   ./install-all-kernels.sh
+
+   # Start Jupyter
+   ./run-jupyter.sh
+   ```
+
+3. Navigate to the tutorial you want to learn:
 
    ```bash
    cd learn-python  # or any other language
    ```
 
-3. Follow the README in each folder for language-specific setup and instructions.
+4. Follow the README in each folder for language-specific setup and instructions.
+
+### Option 3: VS Code Dev Container / GitHub Codespaces
+
+Open this repository in:
+
+- **VS Code**: Click "Reopen in Container" when prompted
+- **GitHub Codespaces**: Click "Code" → "Open with Codespaces"
+
+All dependencies will be automatically configured!
 
 ## 🎯 Learning Path Recommendations
 

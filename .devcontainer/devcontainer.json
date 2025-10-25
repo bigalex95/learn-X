@@ -1,0 +1,42 @@
+{
+  "name": "learn-X Development Container",
+  "dockerComposeFile": "../docker-compose.minimal.yml",
+  "service": "jupyter",
+  "workspaceFolder": "/home/jovyan/work",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "golang.go",
+        "rust-lang.rust-analyzer",
+        "ms-vscode.cpptools",
+        "timonwong.shellcheck",
+        "foxundermoon.shell-format"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/opt/conda/bin/python",
+        "jupyter.notebookFileRoot": "${workspaceFolder}",
+        "files.watcherExclude": {
+          "**/.git/objects/**": true,
+          "**/target/**": true,
+          "**/node_modules/**": true
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [8888],
+  "portsAttributes": {
+    "8888": {
+      "label": "Jupyter Lab",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "echo 'Dev Container Ready! Access Jupyter Lab at http://localhost:8888'",
+
+  "remoteUser": "jovyan"
+}
