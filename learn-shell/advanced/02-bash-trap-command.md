@@ -6,7 +6,7 @@ It often comes the situations that you want to catch a special signal/interrupti
 
 Trap is your command to try:
 
-- `trap <arg/function> <signal>`
+- `trap <arg/function> <signal>`
 
 ### Example
 
@@ -27,7 +27,7 @@ do
 done
 ```
 
-Surely you can substitute the `"echo Booh!"` with a function:
+Surely you can substitute the `"echo Booh!"` with a function:
 
 ```bash
 function booh {
@@ -68,4 +68,73 @@ trap "rm -f folder; exit" 2
 
 ## Exercise
 
-There is no exercise for this section.
+### Exercise 1: Basic Cleanup
+
+Create a script with cleanup on exit:
+
+```bash
+#!/bin/bash
+cleanup() {
+    echo "Cleaning up..."
+    rm -f /tmp/test$$
+}
+trap cleanup EXIT
+
+echo "Working..." > /tmp/test$$
+sleep 5
+echo "Done"
+```
+
+### Exercise 2: Handle Interrupts
+
+Create a script that handles Ctrl+C gracefully:
+
+```bash
+#!/bin/bash
+interrupted() {
+    echo "Script interrupted!"
+    exit 1
+}
+trap interrupted SIGINT
+
+while true; do
+    echo "Running... (Ctrl+C to stop)"
+    sleep 2
+done
+```
+
+### Exercise 3: Multiple Signals
+
+Handle different signals with different actions:
+
+```bash
+#!/bin/bash
+handle_int() { echo "Got SIGINT"; }
+handle_term() { echo "Got SIGTERM"; exit; }
+
+trap handle_int SIGINT
+trap handle_term SIGTERM
+
+while true; do
+    echo "Running..."
+    sleep 3
+done
+```
+
+### Exercise 4: Temp File Cleanup
+
+Create a script that always cleans up temporary files:
+
+```bash
+#!/bin/bash
+TMPFILE=$(mktemp)
+cleanup() {
+    echo "Removing $TMPFILE"
+    rm -f "$TMPFILE"
+}
+trap cleanup EXIT SIGINT SIGTERM
+
+echo "Using temp file: $TMPFILE"
+echo "data" > "$TMPFILE"
+sleep 10
+```
