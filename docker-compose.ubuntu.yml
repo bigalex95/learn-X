@@ -1,0 +1,19 @@
+services:
+  learn-x-jupyter-ubuntu:
+    build:
+      context: .
+      dockerfile: Dockerfile.ubuntu
+    container_name: learn-x-jupyter-ubuntu
+    user: learner
+    ports:
+      - "8889:8888"  # Different port to avoid conflict with other containers
+    volumes:
+      - ./learn-python:/home/learner/work/learn-python
+      - ./learn-go:/home/learner/work/learn-go
+      - ./learn-rust:/home/learner/work/learn-rust
+      - ./learn-shell:/home/learner/work/learn-shell
+      - ./learn-cpp:/home/learner/work/learn-cpp
+      - ./README.md:/home/learner/work/README.md:ro
+      - ./LICENSE:/home/learner/work/LICENSE:ro
+    command: bash -c "jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='' --allow-root"
+    restart: unless-stopped

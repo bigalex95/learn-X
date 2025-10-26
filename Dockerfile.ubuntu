@@ -67,10 +67,8 @@ RUN mkdir -p ${GOPATH} && \
 # ============================================
 # Rust Kernel
 # ============================================
-USER root
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
 USER ${USER}
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="${HOME}/.cargo/bin:${PATH}"
 RUN cargo install evcxr_jupyter && \
     evcxr_jupyter --install
@@ -86,35 +84,38 @@ RUN python3 -m bash_kernel.install
 
 # ============================================
 # C++ Kernel (jupyter-xeus-cling)
-# Note: Building from source is complex, using pre-built alternative
+# Note: C++ kernel installation on Ubuntu is complex
+# Using miniforge (conda-forge only, no ToS issues)
 # ============================================
 USER root
-# Install xeus-cling dependencies
-RUN apt-get update && apt-get install -y \
-    libcxxopts-dev \
-    libnlohmann-json3-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Install miniforge (conda-forge only, no ToS)
+RUN wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh && \
+    bash Miniforge3-Linux-x86_64.sh -b -p /opt/conda && \
+    rm Miniforge3-Linux-x86_64.sh
 
-# For Ubuntu-based, we'll use cling interpreter directly
-# Download and install pre-built cling
-RUN cd /tmp && \
-    wget -q https://root.cern/download/cling/cling_2020-11-05_ROOT-ubuntu2004.tar.bz2 && \
-    tar -xjf cling_2020-11-05_ROOT-ubuntu2004.tar.bz2 && \
-    mv cling_2020-11-05_ROOT-ubuntu2004 /opt/cling && \
-    rm cling_2020-11-05_ROOT-ubuntu2004.tar.bz2
+ENV PATH="/opt/conda/bin:${PATH}"
 
-ENV PATH="/opt/cling/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/cling/lib:${LD_LIBRARY_PATH}"
+# Install xeus-cling via mamba
+RUN mamba install xeus-cling -y && \
+    mamba clean -a -y
 
-# Install xeus-cling kernel (simplified version)
+# Symlink C++ kernels to where system Jupyter can find them
+RUN mkdir -p /usr/local/share/jupyter/kernels && \
+    ln -s /opt/conda/share/jupyter/kernels/xcpp11 /usr/local/share/jupyter/kernels/xcpp11 && \
+    ln -s /opt/conda/share/jupyter/kernels/xcpp14 /usr/local/share/jupyter/kernels/xcpp14 && \
+    ln -s /opt/conda/share/jupyter/kernels/xcpp17 /usr/local/share/jupyter/kernels/xcpp17
+
+# Make conda kernels accessible to learner user
+RUN chown -R learner:learner /opt/conda/share/jupyter/kernels
+
 USER ${USER}
-RUN pip3 install --no-cache-dir jupyter-cling-kernel || \
-    echo "Warning: C++ kernel installation may require manual configuration"
+
+# Add conda to learner user's PATH
+ENV PATH="/opt/conda/bin:${PATH}"
 
 # ============================================
 # Setup
 # ============================================
-USER ${USER}
 WORKDIR ${HOME}/work
 
 # Expose Jupyter port
