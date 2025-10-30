@@ -1,6 +1,6 @@
 {
   "name": "learn-X Development Container",
-  "dockerComposeFile": "../docker-compose.minimal.yml",
+  "dockerComposeFile": "../docker-compose.yml",
   "service": "jupyter",
   "workspaceFolder": "/home/jovyan/work",
 
